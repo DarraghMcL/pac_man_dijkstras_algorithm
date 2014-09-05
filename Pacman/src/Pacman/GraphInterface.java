@@ -1,6 +1,6 @@
 package Pacman;
 
-public interface GraphADT
+public interface GraphInterface
 {
     //Adds edge
     public void setEdge (Node start, Node end, int weight);

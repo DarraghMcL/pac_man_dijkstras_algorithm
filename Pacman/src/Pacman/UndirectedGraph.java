@@ -3,14 +3,12 @@ package Pacman;
 
 import java.util.*;
 
-public class UndirectedGraph implements GraphADT
+public class UndirectedGraph implements GraphInterface
 {
     //declaring class variables
 
-    private ArrayList nodes = new ArrayList();
+    private ArrayList<Node> nodes = new ArrayList<Node>();
     private int[][] adjMatrix;
-    private int size;
-    private static int nodeId = 0;
     public static final double INFINITY = Double.POSITIVE_INFINITY;
 
     //empty class constructor
@@ -79,66 +77,6 @@ public class UndirectedGraph implements GraphADT
         }
     }
 
-    //gets the next unvisited child node
-    private Node getUnvisitedChildNode(Node n)
-    {
-        int indexParent = nodes.indexOf(n);
-        Iterator it = n.getNeighbors();
-
-        while (it.hasNext()) {
-            Node neigh = (Node) it.next();
-            if (!neigh.isVisited()) {
-                return neigh;
-            }
-
-        }
-        return null;
-
-    }
-
-    //Breadth-first traversal of the tree
-    //not needed for shortest path but is here for abstract class
-    public void bfs(Node src)
-    {
-        QueueADT q = new LinkedQueue();
-        q.enqueue(src);
-        printNode(src);
-        src.setVisited(true);
-        while (!q.isEmpty()) {
-            Node n = (Node) q.dequeue();
-            Node child = null;
-            while ((child = getUnvisitedChildNode(n)) != null) {
-                child.setVisited(true);
-                printNode(child);
-                q.enqueue(child);
-            }
-        }
-
-        clearNodes();
-
-    }
-
-    //depth-first transversal of tree
-    //not needed for shortest path but is here for abstract class
-    public void dfs(Node src)
-    {
-        StackADT s = new LinkedStack();
-        s.push(src);
-        src.setVisited(true);
-        printNode(src);
-        while (!s.isEmpty()) {
-            Node n = (Node) s.peek();
-            Node child = getUnvisitedChildNode(n);
-            if (child != null) {
-                child.setVisited(true);
-                printNode(child);
-                s.push(child);
-            } else {
-                s.pop();
-            }
-        }
-        clearNodes();
-    }
 
     private void clearNodes()
     {
@@ -148,11 +86,6 @@ public class UndirectedGraph implements GraphADT
             n.setVisited(false);
             i++;
         }
-    }
-
-    private void printNode(Node n)
-    {
-        System.out.println(n.getLabel() + " ");
     }
 
     //display the graph

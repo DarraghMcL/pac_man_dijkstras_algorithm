@@ -318,6 +318,11 @@ public class Maze extends JPanel
     public void gameOver()
     {
         pacman.stop();
+        ghost0.stop();
+        ghost1.stop();
+        ghost2.stop();
+        ghost3.stop();
+
         showHighScore = true;
     }
 
