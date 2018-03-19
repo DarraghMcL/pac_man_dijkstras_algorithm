@@ -15,14 +15,14 @@ import java.util.Random;
 /**
  * Represents the maze that appears on screen. Creates the maze data using
  * a 2D array of Cell objects, and renders the maze on screen.
- *
  */
-public class Maze extends JPanel
-{
+public class Maze extends JPanel {
 
-    Random rand = new Random();
-    final static int CELL = 20; //cell dimension in pixels
-    /** The two-dimensional array of Cells that will make up the maze */
+    private Random rand = new Random();
+    private final static int CELL = 20; //cell dimension in pixels
+    /**
+     * The two-dimensional array of Cells that will make up the maze
+     */
     private Cell[][] cells;
     // the width of the map in tiles (NOT pixels)
     int tileWidth;
@@ -42,32 +42,31 @@ public class Maze extends JPanel
     //declaring various variables
     private boolean showHighScore = false;
     private boolean updateHighScores = true;
-    int points = 0;
-    int levelNumber = 1;
+    private int points = 0;
+    private int levelNumber = 1;
     boolean isPaused = false;
     boolean firstPlay = true;
-    int difficulty = 0;
+    private int difficulty = 0;
     //array of highscores
-    int[] highScores = new int[5];
-    int[] tempHighScores = new int[6];
+    private int[] highScores = new int[5];
+    private int[] tempHighScores = new int[6];
     //file and applet declaration for audio
-    FileInputStream scoreFile;
+    private FileInputStream scoreFile;
     File scoringFile;
-    FileWriter highScoreIn;
+    private FileWriter highScoreIn;
     private String map[] = {"Resources/level1.txt", "Resources/level2.txt"};
-    AudioClip wakaWakaPlayer;
-    File wakaWakaFile = new File("Resources/wakaWaka.wav");
-    URL wakaWakaURL;
-    AudioClip deadPlayer;
-    File deadFile = new File("Resources/dead.wav");
-    URL deadURL;
-    AudioClip openingPlayer;
-    File openingFile = new File("Resources/opening.wav");
-    URL openingURL;
+    private AudioClip wakaWakaPlayer;
+    private File wakaWakaFile = new File("Resources/wakaWaka.wav");
+    private URL wakaWakaURL;
+    private AudioClip deadPlayer;
+    private File deadFile = new File("Resources/dead.wav");
+    private URL deadURL;
+    private AudioClip openingPlayer;
+    private File openingFile = new File("Resources/opening.wav");
+    private URL openingURL;
 
-    public Maze()
-    {
-    //creating new instances of sound players
+    private Maze() {
+        //creating new instances of sound players
         try {
             wakaWakaURL = wakaWakaFile.toURL();
             deadURL = deadFile.toURL();
@@ -87,7 +86,7 @@ public class Maze extends JPanel
 
         //creating new instances of pacman and ghosts
         setPreferredSize(new Dimension(CELL * tileWidth, CELL * tileHeight + 100));
-        pacman = new Pacman(pacmanInitialRow, pacmanInitialColumn, this, 1);
+        pacman = new Pacman(pacmanInitialRow, pacmanInitialColumn, this, 3);
         pacman.start();
 
         ghost0 = new Ghost(ghostInitialRow, ghostInitialCol, this, 0, 200, difficulty);
@@ -104,12 +103,10 @@ public class Maze extends JPanel
 
 
         this.setFocusable(true);
-        this.addKeyListener(new KeyAdapter()
-        {
+        this.addKeyListener(new KeyAdapter() {
             //listening for arrow keyboard input
 
-            public void keyPressed(KeyEvent e)
-            {
+            public void keyPressed(KeyEvent e) {
                 //checks if the cell is navigatable before changing direction to prevent pacman from stopping
                 if (e.getKeyCode() == KeyEvent.VK_UP && pacman.isCellNavigable(pacman.getCol() - 1, pacman.getRow())) {
                     pacman.setDirection('u');
@@ -123,9 +120,9 @@ public class Maze extends JPanel
                 }
                 //pausing the game
                 if (e.getKeyCode() == KeyEvent.VK_P) {
-                    if (isPaused == false) {
+                    if (!isPaused) {
                         isPaused = true;
-                    } else if (isPaused == true) {
+                    } else{
                         resumeGame();
                     }
                 }
@@ -143,7 +140,7 @@ public class Maze extends JPanel
                 }
 
                 //restarting or quitting the game after all lives are lost
-                if (showHighScore == true && e.getKeyCode() == KeyEvent.VK_SPACE) {
+                if (showHighScore && e.getKeyCode() == KeyEvent.VK_SPACE) {
 
                     //updating the highscores and reseting the game variables
                     showHighScore = false;
@@ -161,38 +158,32 @@ public class Maze extends JPanel
                     firstPlay = false;
                 }
                 //pressing escape at the highScore screen will exit the game
-                if (showHighScore == true && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                if (showHighScore && e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                     updateHighScores = true;
                     System.exit(0);
-
                 }
-
             }
         });
         repaint();
     }
 
     //returns pacmans x coord
-    public int getPacmanX()
-    {
+    public int getPacmanX() {
         return pacman.getRow();
     }
 
     //returns pacmans y coord
-    public int getPacmanY()
-    {
+    public int getPacmanY() {
         return pacman.getCol();
     }
 
     //gets the collision box for pacman
-    public Rectangle getPacmanBounds()
-    {
+    public Rectangle getPacmanBounds() {
         return pacman.getPacmanBounds();
     }
 
     //reads the high scores from file and stores them in an array
-    public void readHighScores()
-    {
+    private void readHighScores() {
         try {
             //getting file to read from
             scoreFile = new FileInputStream("Resources/highScores.txt");
@@ -201,34 +192,26 @@ public class Maze extends JPanel
         }
 
         //creating reader buffers
-        DataInputStream in = new DataInputStream(scoreFile);
-        BufferedReader br = new BufferedReader(new InputStreamReader(in));
         String score = "";
         int i = 0;
-        try {
+        try (DataInputStream in = new DataInputStream(scoreFile);
+             BufferedReader br = new BufferedReader(new InputStreamReader(in))
+        ) {
             //looping through each line and adding it to the array
             //lines need to be parsed to int when read
             while ((score = br.readLine()) != null) {
                 highScores[i] = Integer.parseInt(score);
                 i++;
             }
-        } catch (NumberFormatException ex) {
-            ex.printStackTrace();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        try {
-            //closing the bufferd reader
             br.close();
-        } catch (IOException ex) {
+        } catch (NumberFormatException | IOException ex) {
             ex.printStackTrace();
-        }
 
+        }
     }
 
     //method writes the current high score list to file
-    public void writeHighScores() throws IOException
-    {
+    private void writeHighScores() throws IOException {
         try {
             //getting file to write to
             highScoreIn = new FileWriter("Resources/highScores.txt");
@@ -266,16 +249,14 @@ public class Maze extends JPanel
     }
 
     //resume game after pausing
-    public synchronized void resumeGame()
-    {
+    private synchronized void resumeGame() {
         isPaused = false;
         notify();
     }
 
     //returns number greater than 0 if there are pills in the level
     //if 0 is returned the level is cleared
-    public int levelClear()
-    {
+    private int levelClear() {
         int pillCount = 0;
         for (int i = 0; i < tileHeight; i++) {
             for (int j = 0; j < tileWidth; j++) {
@@ -289,8 +270,7 @@ public class Maze extends JPanel
     }
 
     //when pacman is at a 'd' node it is changed to 'o'
-    public void eatsPills()
-    {
+    public void eatsPills() {
         if (cells[pacman.getCol()][pacman.getRow()].getType() == 'd') {
             cells[pacman.getCol()][pacman.getRow()].type = 'o';
             //sound is played and score is increased
@@ -300,8 +280,7 @@ public class Maze extends JPanel
     }
 
     //when pacman is at a 'p' node it is changed to 'o'
-    public void eatsPowerPills()
-    {
+    public void eatsPowerPills() {
         if (cells[pacman.getCol()][pacman.getRow()].getType() == 'p') {
             cells[pacman.getCol()][pacman.getRow()].type = 'o';
             //ghosts are made vulnerable
@@ -315,8 +294,7 @@ public class Maze extends JPanel
     }
 
     //when pacman looses all of his lives
-    public void gameOver()
-    {
+    private void gameOver() {
         pacman.stop();
         ghost0.stop();
         ghost1.stop();
@@ -328,8 +306,7 @@ public class Maze extends JPanel
 
     //allows characters to use the tunnel
     //when a character lands on a tunnel node they are moved to the corresponding node
-    public void tunnel()
-    {
+    private void tunnel() {
         if (pacman.getRow() == 1 && pacman.getCol() == 10) {
             pacman.setCol(10);
             pacman.setRow(43);
@@ -381,8 +358,7 @@ public class Maze extends JPanel
     }
 
     //used when the level is cleared or a new game is started
-    public void resetLevel() throws InterruptedException
-    {
+    private void resetLevel() throws InterruptedException {
         //pause all threads and recreate the character instances
         isPaused = true;
         pacman = new Pacman(pacmanInitialRow, pacmanInitialColumn, this, pacman.getLives());
@@ -402,31 +378,26 @@ public class Maze extends JPanel
     }
 
     //multiple method to detect collisions with pacman and each ghost
-    public boolean collisionWithGhost0()
-    {
+    private boolean collisionWithGhost0() {
         return pacman.getPacmanBounds().intersects(ghost0.getGhostBounds());
     }
 
-    public boolean collisionWithGhost1()
-    {
+    private boolean collisionWithGhost1() {
         return pacman.getPacmanBounds().intersects(ghost1.getGhostBounds());
     }
 
-    public boolean collisionWithGhost2()
-    {
+    private boolean collisionWithGhost2() {
         return pacman.getPacmanBounds().intersects(ghost2.getGhostBounds());
     }
 
-    public boolean collisionWithGhost3()
-    {
+    private boolean collisionWithGhost3() {
         return pacman.getPacmanBounds().intersects(ghost3.getGhostBounds());
     }
 
     /**
      * Reads from the map file and create the two dimensional array
      */
-    private void createCellArray(String mapFile)
-    {
+    private void createCellArray(String mapFile) {
         // Scanner object to read from map file
         Scanner fileReader;
         ArrayList<String> lineList = new ArrayList<String>();
@@ -449,7 +420,7 @@ public class Maze extends JPanel
             tileHeight = lineList.size();
             tileWidth = lineList.get(0).length();
 
-            // createing the cells
+            // creating the cells
             cells = new Cell[tileHeight][tileWidth];
             for (int row = 0; row < tileHeight; row++) {
                 String line = lineList.get(row);
@@ -465,45 +436,44 @@ public class Maze extends JPanel
 
     //method to determine various collision behaviours
     //the first two statements are repeated for all ghosts
-    public void collisions() throws InterruptedException
-    {
+    private void collisions() throws InterruptedException {
         //when ghost is vulnerable and not eaten, eat him
-        if (collisionWithGhost0() && ghost0.isVulnerable() == true && ghost0.eaten == false) {
+        if (collisionWithGhost0() && ghost0.isVulnerable() && !ghost0.isEaten()) {
             points = points + 100;
-            ghost0.eaten = true;
+            ghost0.setEaten(true);
         }
         //when ghost is not vulnerable, pacman dies
-        if (collisionWithGhost0() && ghost0.isVulnerable() == false && ghost0.eaten == false) {
+        if (collisionWithGhost0() && ghost0.isVulnerable() && !ghost0.isEaten()) {
             deadPlayer.play();
             pacman.setLives(pacman.getLives() - 1);
             resetLevel();
         }
 
-        if (collisionWithGhost1() && ghost1.isVulnerable() == true && ghost1.eaten == false) {
+        if (collisionWithGhost1() && ghost1.isVulnerable() && !ghost1.isEaten()) {
             points = points + 100;
-            ghost1.eaten = true;
+            ghost1.setEaten(true);
         }
-        if (collisionWithGhost1() && ghost1.isVulnerable() == false && ghost1.eaten == false) {
+        if (collisionWithGhost1() && ghost1.isVulnerable() && !ghost1.isEaten()) {
             deadPlayer.play();
             pacman.setLives(pacman.getLives() - 1);
             resetLevel();
         }
 
-        if (collisionWithGhost2() && ghost2.isVulnerable() == true && ghost2.eaten == false) {
+        if (collisionWithGhost2() && ghost2.isVulnerable() && !ghost2.isEaten()) {
             points = points + 100;
-            ghost2.eaten = true;
+            ghost2.setEaten(true);
         }
-        if (collisionWithGhost2() && ghost2.isVulnerable() == false && ghost2.eaten == false) {
+        if (collisionWithGhost2() && !ghost2.isVulnerable() && !ghost2.isEaten()) {
             deadPlayer.play();
             pacman.setLives(pacman.getLives() - 1);
             resetLevel();
         }
 
-        if (collisionWithGhost3() && ghost3.isVulnerable() == true && ghost3.eaten == false) {
+        if (collisionWithGhost3() && ghost3.isVulnerable() && !ghost3.isEaten()) {
             points = points + 100;
-            ghost3.eaten = true;
+            ghost3.setEaten(true);
         }
-        if (collisionWithGhost3() && ghost3.isVulnerable() == false && ghost3.eaten == false) {
+        if (collisionWithGhost3() && !ghost3.isVulnerable() && !ghost3.isEaten()) {
             deadPlayer.play();
             pacman.setLives(pacman.getLives() - 1);
             resetLevel();
@@ -513,8 +483,7 @@ public class Maze extends JPanel
 
     //paint class for maze
     //many methods are called here becuase the paint method is recalled regularly
-    public void paintComponent(Graphics g)
-    {
+    public void paintComponent(Graphics g) {
 
         super.paintComponent(g);
         g.setColor(Color.BLACK);
@@ -531,7 +500,7 @@ public class Maze extends JPanel
 
         }
         //plays the opening theme music if it is the first time the level is seen
-        if (firstPlay == true) {
+        if (firstPlay) {
             openingPlayer.play();
             firstPlay = false;
         }
@@ -562,7 +531,7 @@ public class Maze extends JPanel
         }
 
         //displays high score table when all lives are lost
-        if (pacman.getLives() == 0 && updateHighScores == true) {
+        if (pacman.getLives() == 0 && updateHighScores) {
             readHighScores();
             try {
                 writeHighScores();
@@ -574,12 +543,12 @@ public class Maze extends JPanel
         }
 
         //checks if the game is paused
-        if (isPaused == true) {
+        if (isPaused) {
             g.drawImage(Toolkit.getDefaultToolkit().getImage("Resources/pause.gif"), 370, 200, pacman.maze);
         }
 
         //paints the highscore table
-        if (showHighScore == true) {
+        if (showHighScore) {
             g.drawImage(Toolkit.getDefaultToolkit().getImage("Resources/highScore.png"), 370, 200, pacman.maze);
             g.drawString(Integer.toString(highScores[0]), 450, 280);
             g.drawString(Integer.toString(highScores[1]), 450, 315);
@@ -603,8 +572,7 @@ public class Maze extends JPanel
     }
 
     //returns the cells array
-    public Cell[][] getCells()
-    {
+    public Cell[][] getCells() {
         return cells;
     }
 }

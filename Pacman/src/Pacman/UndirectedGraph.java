@@ -7,18 +7,13 @@ public class UndirectedGraph implements GraphInterface
 {
     //declaring class variables
 
-    private ArrayList<Node> nodes = new ArrayList<Node>();
+    private ArrayList<Node> nodes;
     private int[][] adjMatrix;
-    public static final double INFINITY = Double.POSITIVE_INFINITY;
-
-    //empty class constructor
-    public UndirectedGraph()
-    {
-    }
 
     //constructor
-    public UndirectedGraph(int size)
+     UndirectedGraph(int size)
     {
+        nodes = new ArrayList<>();
         adjMatrix = new int[size][size];
 
         for (int i = 0; i < size; i++) {
@@ -194,7 +189,7 @@ public class UndirectedGraph implements GraphInterface
         };
 
         //setting up a new queue
-        PriorityQueue<Node> nodeQueue = new PriorityQueue<Node>(6, comp);
+        PriorityQueue<Node> nodeQueue = new PriorityQueue<>(6, comp);
         nodeQueue.add(src);
 
         //fills the queue with nodes
