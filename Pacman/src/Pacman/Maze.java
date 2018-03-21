@@ -11,6 +11,9 @@ import java.applet.AudioClip;
 import java.net.URL;
 import java.net.MalformedURLException;
 import java.util.Random;
+import java.util.stream.IntStream;
+
+import static java.util.stream.IntStream.range;
 
 /**
  * Represents the maze that appears on screen. Creates the maze data using
@@ -18,41 +21,36 @@ import java.util.Random;
  */
 public class Maze extends JPanel {
 
-    private Random rand = new Random();
     private final static int CELL = 20; //cell dimension in pixels
     /**
      * The two-dimensional array of Cells that will make up the maze
      */
-    private Cell[][] cells;
-    // the width of the map in tiles (NOT pixels)
-    int tileWidth;
-    // the height of the map in tiles (NOT pixels)
-    int tileHeight;
+    //private ArrayList<Cell> cells
+    private UndirectedGraph graph;
     //initialising pacman
     private Pacman pacman;
-    private int pacmanInitialRow = 20;
-    private int pacmanInitialColumn = 13;
+    private int pacmanInitialRow = 13;
+    private int pacmanInitialColumn = 20;
     //initialising ghosts
     private Ghost ghost0;
     private Ghost ghost1;
     private Ghost ghost2;
     private Ghost ghost3;
-    int ghostInitialRow = 23;
-    int ghostInitialCol = 10;
-    //declaring various variables
+    public int ghostInitialRow = 10;
+    public int ghostInitialCol = 23;
+    //declaring variables
     private boolean showHighScore = false;
     private boolean updateHighScores = true;
     private int points = 0;
     private int levelNumber = 1;
     boolean isPaused = false;
-    boolean firstPlay = true;
+    public boolean firstPlay = true;
     private int difficulty = 0;
     //array of highscores
     private int[] highScores = new int[5];
     private int[] tempHighScores = new int[6];
     //file and applet declaration for audio
     private FileInputStream scoreFile;
-    File scoringFile;
     private FileWriter highScoreIn;
     private String map[] = {"Resources/level1.txt", "Resources/level2.txt"};
     private AudioClip wakaWakaPlayer;
@@ -65,7 +63,11 @@ public class Maze extends JPanel {
     private File openingFile = new File("Resources/opening.wav");
     private URL openingURL;
 
-    private Maze() {
+    public Pacman getPacman() {
+        return pacman;
+    }
+
+    public Maze() {
         //creating new instances of sound players
         try {
             wakaWakaURL = wakaWakaFile.toURL();
@@ -74,31 +76,34 @@ public class Maze extends JPanel {
         } catch (MalformedURLException ex) {
             ex.printStackTrace();
         }
+
         wakaWakaPlayer = Applet.newAudioClip(wakaWakaURL);
         deadPlayer = Applet.newAudioClip(deadURL);
         openingPlayer = Applet.newAudioClip(openingURL);
 
         //new map is generated from a randomly selected map
-        createCellArray(map[rand.nextInt(map.length)]);
+        graph = new UndirectedGraph();
 
         //this code is used to generate the test map
         //createCellArray("Resources/levelTest.txt");
 
         //creating new instances of pacman and ghosts
-        setPreferredSize(new Dimension(CELL * tileWidth, CELL * tileHeight + 100));
-        pacman = new Pacman(pacmanInitialRow, pacmanInitialColumn, this, 3);
+        setPreferredSize(new Dimension(CELL * graph.getGraphWidth(), CELL * graph.getGraphHeight() + 100));
+        pacman = new Pacman(pacmanInitialColumn, pacmanInitialRow, this, 3, graph);
         pacman.start();
 
-        ghost0 = new Ghost(ghostInitialRow, ghostInitialCol, this, 0, 200, difficulty);
+        System.out.println(pacman.getPacmanCell().toString());
+
+        ghost0 = new Ghost(ghostInitialCol, ghostInitialRow, this, 0, 200, difficulty, graph);
         ghost0.start();
 
-        ghost1 = new Ghost(ghostInitialRow, ghostInitialCol, this, 1, 1500, difficulty);
+        ghost1 = new Ghost(ghostInitialCol, ghostInitialRow, this, 1, 1500, difficulty, graph);
         ghost1.start();
 
-        ghost2 = new Ghost(ghostInitialRow, ghostInitialCol, this, 2, 1000, difficulty);
+        ghost2 = new Ghost(ghostInitialCol, ghostInitialRow, this, 2, 1000, difficulty, graph);
         ghost2.start();
 
-        ghost3 = new Ghost(ghostInitialRow, ghostInitialCol, this, 3, 2000, difficulty);
+        ghost3 = new Ghost(ghostInitialCol, ghostInitialRow, this, 3, 2000, difficulty, graph);
         ghost3.start();
 
 
@@ -108,21 +113,21 @@ public class Maze extends JPanel {
 
             public void keyPressed(KeyEvent e) {
                 //checks if the cell is navigatable before changing direction to prevent pacman from stopping
-                if (e.getKeyCode() == KeyEvent.VK_UP && pacman.isCellNavigable(pacman.getCol() - 1, pacman.getRow())) {
+                if (e.getKeyCode() == KeyEvent.VK_UP && graph.isCellNavigable(graph.get_cell_by_coords(pacman.getCol(), pacman.getRow() - 1))) {
                     pacman.setDirection('u');
-
-                } else if (e.getKeyCode() == KeyEvent.VK_DOWN && pacman.isCellNavigable(pacman.getCol() + 1, pacman.getRow())) {
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN && graph.isCellNavigable(graph.get_cell_by_coords(pacman.getCol(), pacman.getRow() + 1))) {
                     pacman.setDirection('d');
-                } else if (e.getKeyCode() == KeyEvent.VK_LEFT && pacman.isCellNavigable(pacman.getCol(), pacman.getRow() - 1)) {
+                } else if (e.getKeyCode() == KeyEvent.VK_LEFT && graph.isCellNavigable(graph.get_cell_by_coords(pacman.getCol() - 1, pacman.getRow()))) {
                     pacman.setDirection('l');
-                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT && pacman.isCellNavigable(pacman.getCol(), pacman.getRow() + 1)) {
+                } else if (e.getKeyCode() == KeyEvent.VK_RIGHT && graph.isCellNavigable(graph.get_cell_by_coords(pacman.getCol() + 1, pacman.getRow()))) {
                     pacman.setDirection('r');
                 }
+
                 //pausing the game
                 if (e.getKeyCode() == KeyEvent.VK_P) {
                     if (!isPaused) {
                         isPaused = true;
-                    } else{
+                    } else {
                         resumeGame();
                     }
                 }
@@ -148,7 +153,7 @@ public class Maze extends JPanel {
                     pacman.setLives(3);
                     points = 0;
                     levelNumber = 1;
-                    createCellArray(map[rand.nextInt(map.length - 1)]);
+                    graph = new UndirectedGraph();
                     firstPlay = true;
                     try {
                         resetLevel();
@@ -165,21 +170,6 @@ public class Maze extends JPanel {
             }
         });
         repaint();
-    }
-
-    //returns pacmans x coord
-    public int getPacmanX() {
-        return pacman.getRow();
-    }
-
-    //returns pacmans y coord
-    public int getPacmanY() {
-        return pacman.getCol();
-    }
-
-    //gets the collision box for pacman
-    public Rectangle getPacmanBounds() {
-        return pacman.getPacmanBounds();
     }
 
     //reads the high scores from file and stores them in an array
@@ -220,9 +210,9 @@ public class Maze extends JPanel {
         }
 
         //adding new high score to temporary table and sorting the table
-        for (int i = 0; i < 5; i++) {
-            tempHighScores[i] = highScores[i];
-        }
+
+        range(0, 5).forEach(i -> tempHighScores[i] = highScores[i]);
+
         tempHighScores[5] = points;
         Arrays.sort(tempHighScores);
         //reversing to have array in descending order
@@ -233,9 +223,7 @@ public class Maze extends JPanel {
             tempHighScores[tempHighScores.length - (w + 1)] = temp;
         }
         //adding temp array to main array of highscores
-        for (int j = 0; j < 5; j++) {
-            highScores[j] = tempHighScores[j];
-        }
+        IntStream.range(0, 5).forEach(j -> highScores[j] = tempHighScores[j]);
         //writing the updated array to the file
         BufferedWriter out = new BufferedWriter(highScoreIn);
         for (int k = 0; k < 5; k++) {
@@ -254,25 +242,12 @@ public class Maze extends JPanel {
         notify();
     }
 
-    //returns number greater than 0 if there are pills in the level
-    //if 0 is returned the level is cleared
-    private int levelClear() {
-        int pillCount = 0;
-        for (int i = 0; i < tileHeight; i++) {
-            for (int j = 0; j < tileWidth; j++) {
-                if (cells[i][j].getType() == 'd' || cells[i][j].getType() == 'p') {
-                    pillCount++;
-                }
-
-            }
-        }
-        return pillCount;
-    }
 
     //when pacman is at a 'd' node it is changed to 'o'
     public void eatsPills() {
-        if (cells[pacman.getCol()][pacman.getRow()].getType() == 'd') {
-            cells[pacman.getCol()][pacman.getRow()].type = 'o';
+        Cell cell = pacman.getPacmanCell();
+        if (cell.getType() == 'd') {
+            cell.setType('o');
             //sound is played and score is increased
             wakaWakaPlayer.play();
             points = points + 10;
@@ -281,8 +256,9 @@ public class Maze extends JPanel {
 
     //when pacman is at a 'p' node it is changed to 'o'
     public void eatsPowerPills() {
-        if (cells[pacman.getCol()][pacman.getRow()].getType() == 'p') {
-            cells[pacman.getCol()][pacman.getRow()].type = 'o';
+        Cell cell = pacman.getPacmanCell();
+        if (cell.getType() == 'p') {
+            cell.setType('o');
             //ghosts are made vulnerable
             ghost0.ghostIsVulnerable();
             ghost1.ghostIsVulnerable();
@@ -307,65 +283,66 @@ public class Maze extends JPanel {
     //allows characters to use the tunnel
     //when a character lands on a tunnel node they are moved to the corresponding node
     private void tunnel() {
-        if (pacman.getRow() == 1 && pacman.getCol() == 10) {
-            pacman.setCol(10);
-            pacman.setRow(43);
+        if (pacman.getRow() == 10 && pacman.getCol() == 1) {
+            pacman.setCol(43);
+            pacman.setRow(10);
         }
 
-        if (pacman.getRow() == 44 && pacman.getCol() == 10) {
-            pacman.setCol(10);
-            pacman.setRow(2);
+        if (pacman.getRow() == 10 && pacman.getCol() == 44) {
+            pacman.setCol(2);
+            pacman.setRow(10);
         }
 
-        if (ghost0.getRow() == 1 && ghost0.getCol() == 10) {
-            ghost0.setCol(10);
-            ghost0.setRow(43);
+        if (ghost0.getRow() == 10 && ghost0.getCol() == 1) {
+            ghost0.setCol(43);
+            ghost0.setRow(10);
         }
 
-        if (ghost0.getRow() == 44 && ghost0.getCol() == 10) {
-            ghost0.setCol(10);
-            ghost0.setRow(2);
+        if (ghost0.getRow() == 10 && ghost0.getCol() == 44) {
+            ghost0.setCol(2);
+            ghost0.setRow(10);
         }
 
-        if (ghost1.getRow() == 1 && ghost1.getCol() == 10) {
-            ghost1.setCol(10);
-            ghost1.setRow(43);
+        if (ghost1.getRow() == 10 && ghost1.getCol() == 1) {
+            ghost1.setCol(43);
+            ghost1.setRow(10);
         }
 
-        if (ghost1.getRow() == 44 && ghost1.getCol() == 10) {
-            ghost1.setCol(10);
-            ghost1.setRow(2);
-        }
-        if (ghost2.getRow() == 1 && ghost2.getCol() == 10) {
-            ghost2.setCol(10);
-            ghost2.setRow(43);
+        if (ghost1.getRow() == 10 && ghost1.getCol() == 44) {
+            ghost1.setCol(2);
+            ghost1.setRow(10);
         }
 
-        if (ghost2.getRow() == 44 && ghost2.getCol() == 10) {
-            ghost2.setCol(10);
-            ghost2.setRow(2);
-        }
-        if (ghost3.getRow() == 1 && ghost3.getCol() == 10) {
-            ghost3.setCol(10);
-            ghost3.setRow(43);
+        if (ghost2.getRow() == 10 && ghost2.getCol() == 1) {
+            ghost2.setCol(43);
+            ghost2.setRow(10);
         }
 
-        if (ghost3.getRow() == 44 && ghost3.getCol() == 10) {
-            ghost3.setCol(10);
-            ghost3.setRow(2);
+        if (ghost2.getRow() == 10 && ghost2.getCol() == 44) {
+            ghost2.setCol(2);
+            ghost2.setRow(10);
         }
 
+        if (ghost3.getRow() == 10 && ghost3.getCol() == 1) {
+            ghost3.setCol(43);
+            ghost3.setRow(10);
+        }
+
+        if (ghost3.getRow() == 10 && ghost3.getCol() == 44) {
+            ghost3.setCol(2);
+            ghost3.setRow(10);
+        }
     }
 
     //used when the level is cleared or a new game is started
     private void resetLevel() throws InterruptedException {
         //pause all threads and recreate the character instances
         isPaused = true;
-        pacman = new Pacman(pacmanInitialRow, pacmanInitialColumn, this, pacman.getLives());
-        ghost0 = new Ghost(ghostInitialRow, ghostInitialCol, this, 0, 200, difficulty);
-        ghost1 = new Ghost(ghostInitialRow, ghostInitialCol, this, 1, 1500, difficulty);
-        ghost2 = new Ghost(ghostInitialRow, ghostInitialCol, this, 2, 1000, difficulty);
-        ghost3 = new Ghost(ghostInitialRow, ghostInitialCol, this, 3, 2000, difficulty);
+        pacman = new Pacman(pacmanInitialColumn, pacmanInitialRow, this, pacman.getLives(), graph);
+        ghost0 = new Ghost(ghostInitialCol, ghostInitialRow, this, 0, 200, difficulty, graph);
+        ghost1 = new Ghost(ghostInitialCol, ghostInitialRow, this, 1, 1500, difficulty, graph);
+        ghost2 = new Ghost(ghostInitialCol, ghostInitialRow, this, 2, 1000, difficulty, graph);
+        ghost3 = new Ghost(ghostInitialCol, ghostInitialRow, this, 3, 2000, difficulty, graph);
 
         //restart the threads
         resumeGame();
@@ -394,45 +371,6 @@ public class Maze extends JPanel {
         return pacman.getPacmanBounds().intersects(ghost3.getGhostBounds());
     }
 
-    /**
-     * Reads from the map file and create the two dimensional array
-     */
-    private void createCellArray(String mapFile) {
-        // Scanner object to read from map file
-        Scanner fileReader;
-        ArrayList<String> lineList = new ArrayList<String>();
-
-        // Attempt to load the maze map file
-        try {
-            fileReader = new Scanner(new File(mapFile));
-            while (true) {
-                String line = null;
-                try {
-                    line = fileReader.nextLine();
-                } catch (Exception eof) {
-                    //throw new A5FatalException("Could not read resource");
-                }
-                if (line == null) {
-                    break;
-                }
-                lineList.add(line);
-            }
-            tileHeight = lineList.size();
-            tileWidth = lineList.get(0).length();
-
-            // creating the cells
-            cells = new Cell[tileHeight][tileWidth];
-            for (int row = 0; row < tileHeight; row++) {
-                String line = lineList.get(row);
-                for (int column = 0; column < tileWidth; column++) {
-                    char type = line.charAt(column);
-                    cells[row][column] = new Cell(column, row, type);
-                }
-            }
-        } catch (FileNotFoundException e) {
-            System.out.println("Maze map file not found");
-        }
-    }
 
     //method to determine various collision behaviours
     //the first two statements are repeated for all ghosts
@@ -487,17 +425,11 @@ public class Maze extends JPanel {
 
         super.paintComponent(g);
         g.setColor(Color.BLACK);
-        g.fillRect(0, 0, tileWidth * CELL, tileHeight * CELL);
+        g.fillRect(0, 0, graph.getGraphWidth() * CELL, graph.getGraphHeight() * CELL);
 
 
-        // Outer loop loops through each row in the array
-        for (int row = 0; row < tileHeight; row++) {
-
-            // Inner loop loops through each column in the array
-            for (int column = 0; column < tileWidth; column++) {
-                cells[row][column].drawBackground(g);
-            }
-
+        for (Cell cell : graph.getCells()) {
+            cell.drawBackground(g);
         }
         //plays the opening theme music if it is the first time the level is seen
         if (firstPlay) {
@@ -558,9 +490,9 @@ public class Maze extends JPanel {
         }
 
         //when the level is cleared
-        if (levelClear() == 0) {
+        if (graph.isLevelCleared()) {
             try {
-                createCellArray(map[rand.nextInt(map.length - 1)]);
+                graph = new UndirectedGraph();
                 firstPlay = true;
                 resetLevel();
                 levelNumber++;
@@ -571,8 +503,4 @@ public class Maze extends JPanel {
 
     }
 
-    //returns the cells array
-    public Cell[][] getCells() {
-        return cells;
-    }
 }

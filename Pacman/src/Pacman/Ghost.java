@@ -12,12 +12,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Ghost extends Thread {
-    //variables declaration
 
     private boolean isRunning = true;
     private int ghostRow, ghostCol;
     private Maze maze;
-    private Cell[][] cells;
+    private UndirectedGraph graph;
     private char direction = 'l';
     private boolean vulnerable = false;
     private int ghostAnimationCounter = 0;
@@ -33,9 +32,6 @@ public class Ghost extends Thread {
     //timers
     private int escapeTimer;
     private int vulCounter = 0;
-    //graph and node declaration for shorest path algorithm
-    private UndirectedGraph shortestPath;
-    private Node[] nodes;
     //ghost search parameter ranges
     private int[] searchPara = {200, 300, 700};
     private int difficulty;
@@ -46,7 +42,7 @@ public class Ghost extends Thread {
     private int alertCounter = 0;
 
     //ghost constructor
-    Ghost(int initialRow, int initialCol, Maze startMaze, int Number, int timer, int difc) {
+    Ghost(int initialCol, int initialRow, Maze startMaze, int Number, int timer, int difc, UndirectedGraph graph) {
         //applies the difficulty
         difficulty = difc;
         try {
@@ -60,157 +56,51 @@ public class Ghost extends Thread {
         ghostRow = initialRow;
         ghostCol = initialCol;
         maze = startMaze;
-        cells = maze.getCells();
         ghostNumber = Number;
-        //creating a graph for obtaining the shortest path
-        if (maze.firstPlay) {
-            createGraph();
-            System.out.println("GraphSize:" + graphSize());
-        }
-    }
-
-    //returns the size of the graph(number of cells in the map)
-    private int graphSize() {
-        int size = 0;
-        for (int i = 0; i < maze.tileHeight; i++) {
-            for (int j = 0; j < maze.tileWidth; j++) {
-
-                size++;
-            }
-        }
-        return size;
-    }
-
-    //creates the search graph
-    private void createGraph() {
-        int counter = 0;
-        //creates new graph with appropiate size
-        shortestPath = new UndirectedGraph(graphSize());
-        //creats an array of nodes the same size as the graph
-        nodes = new Node[graphSize()];
-        //creates a new node for each location in the array of nodes
-        for (int i = 0; i < maze.tileHeight; i++) {
-            for (int j = 0; j < maze.tileWidth; j++) {
-                nodes[counter] = new Node("Node:" + counter);
-                nodes[counter].SetX(cells[i][j].x);
-                nodes[counter].SetY(cells[i][j].y);
-                nodes[counter].setId(counter);
-                counter++;
-            }
-        }
-        //adds each node to the graph
-
-        for (int o = 0; o < graphSize(); o++) {
-
-            shortestPath.addNode(nodes[o]);
-        }
-
-        //adds an edge to appropiate nodes
-
-        for (int p = 0; p < graphSize(); p++) {
-            SetNodeEdgesX(p);
-            SetNodeEdgesY(p);
-        }
-    }
-
-    //iterates through each node for the input node and checks if a horizontal edge should be added
-    private void SetNodeEdgesX(int nodeNumber) {
-        for (int i = 0; i < graphSize(); i++) {
-            if ((nodes[nodeNumber].getX() - nodes[i].getX()) == -1 && (nodes[nodeNumber].getY() - nodes[i].getY()) == 0) {
-                if (isCellNavigable(nodes[nodeNumber].getY(), nodes[nodeNumber].getX())) {
-                    if (isCellNavigable(nodes[i].getY(), nodes[i].getX())) {
-                        shortestPath.setEdge(nodes[nodeNumber], nodes[i], 1);
-                    }
-                }
-            }
-        }
-    }
-
-    //iterates through each node for the input node and checks if a vertical edge should be added
-    private void SetNodeEdgesY(int nodeNumber) {
-        for (int i = 0; i < graphSize(); i++) {
-            if ((nodes[nodeNumber].getY() - nodes[i].getY()) == -1 && (nodes[nodeNumber].getX() - nodes[i].getX()) == 0) {
-                if (isCellNavigable(nodes[nodeNumber].getY(), nodes[nodeNumber].getX())) {
-                    if (isCellNavigable(nodes[i].getY(), nodes[i].getX())) {
-                        shortestPath.setEdge(nodes[nodeNumber], nodes[i], 1);
-                    }
-                }
-            }
-        }
+        this.graph = graph;
     }
 
     //returns the node that the ghosts is currently standing on by checking the x and y values of the cell he is on
-    private Node getGhostNode() {
-        int nodeNum = 0;
-        for (int i = 0; i < nodes.length; i++) {
-            if (getRow() == nodes[i].getX() && getCol() == nodes[i].getY()) {
-                nodeNum = i;
-            }
-        }
-        return nodes[nodeNum];
+    private Cell getGhostCell() {
+        return graph.get_cell_by_coords(ghostCol, ghostRow);
     }
 
-    //returns the node that pacman is currently standing on by checking the x and y values of the cell he is on
-    private Node getPacmanNode() {
-        int nodeNum = 0;
-        for (int i = 0; i
-                < nodes.length; i++) {
-            if (maze.getPacmanX() == nodes[i].getX() && maze.getPacmanY() == nodes[i].getY()) {
-                nodeNum = i;
-            }
-        }
-        return nodes[nodeNum];
-    }
-
-    //returns the node at the specified x and y coords
-    private Node getSpecificNode(int x, int y) {
-        int nodeNum = 0;
-
-        for (int i = 0; i < nodes.length; i++) {
-            if (x == nodes[i].getX() && y == nodes[i].getY()) {
-                nodeNum = i;
-            }
-        }
-        return nodes[nodeNum];
-    }
-
-    //applies the shortest path algorith and changes the direction to the next node in the path
+    //TODO look at this
     private void ghostChase() {
         //if next node is to the right change direction to 'r'
-        if ((getRow() - shortestPath.getShortestDistance(getGhostNode(), getPacmanNode()).getX()) < 0) {
+        if ((getCol() - graph.getShortestDistance(getGhostCell(), maze.getPacman().getPacmanCell()).getColumn()) < 0) {
             setDirection('r');
 
-        } else if ((getRow() - shortestPath.getShortestDistance(getGhostNode(), getPacmanNode()).getX()) > 0) {
+        } else if ((getCol() - graph.getShortestDistance(getGhostCell(), maze.getPacman().getPacmanCell()).getColumn()) > 0) {
             setDirection('l');
 
-        } else if ((getCol() - shortestPath.getShortestDistance(getGhostNode(), getPacmanNode()).getY()) < 0) {
+        } else if ((getRow() - graph.getShortestDistance(getGhostCell(), maze.getPacman().getPacmanCell()).getRow()) < 0) {
             setDirection('d');
 
-        } else if ((getCol() - shortestPath.getShortestDistance(getGhostNode(), getPacmanNode()).getY()) > 0) {
+        } else if ((getRow() - graph.getShortestDistance(getGhostCell(), maze.getPacman().getPacmanCell()).getRow()) > 0) {
             setDirection('u');
         }
     }
 
     //applies shortest path algorithm to get the ghost back in the box
     private void returnToBox() {
-        if ((getRow() - shortestPath.getShortestDistance(getGhostNode(), getSpecificNode(maze.ghostInitialRow, maze.ghostInitialCol)).getX()) < 0) {
+        if ((getCol() - graph.getShortestDistance(getGhostCell(), graph.get_cell_by_coords(maze.ghostInitialCol, maze.ghostInitialRow)).getColumn()) < 0) {
             setDirection('r');
 
-        } else if ((getRow() - shortestPath.getShortestDistance(getGhostNode(), getSpecificNode(maze.ghostInitialRow, maze.ghostInitialCol)).getX()) > 0) {
+        } else if ((getCol() - graph.getShortestDistance(getGhostCell(), graph.get_cell_by_coords(maze.ghostInitialCol, maze.ghostInitialRow)).getColumn()) > 0) {
             setDirection('l');
 
-        } else if ((getCol() - shortestPath.getShortestDistance(getGhostNode(), getSpecificNode(maze.ghostInitialRow, maze.ghostInitialCol)).getY()) < 0) {
+        } else if ((getRow() - graph.getShortestDistance(getGhostCell(), graph.get_cell_by_coords(maze.ghostInitialCol, maze.ghostInitialRow)).getRow()) < 0) {
             setDirection('d');
 
-        } else if ((getCol() - shortestPath.getShortestDistance(getGhostNode(), getSpecificNode(maze.ghostInitialRow, maze.ghostInitialCol)).getY()) > 0) {
+        } else if ((getRow() - graph.getShortestDistance(getGhostCell(), graph.get_cell_by_coords(maze.ghostInitialCol, maze.ghostInitialRow)).getRow()) > 0) {
             setDirection('u');
         }
     }
 
     //returns true if pacman is within the ghost search parameter
-    private boolean searching() {
-        return (getSearchParameter().intersects(maze.getPacmanBounds()));
-
+    private boolean searching(Rectangle rect) {
+        return (getSearchParameter().intersects(rect));
     }
 
     //ghost draw class
@@ -220,20 +110,20 @@ public class Ghost extends Thread {
         }
         //if the ghost has been eaten only his eyes are displayed
         if (eaten) {
-            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostEaten[ghostAnimationCounter]), ghostRow * 20, ghostCol * 20, maze);
+            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostEaten[ghostAnimationCounter]), ghostCol * 20, ghostRow * 20, maze);
         }
         //if the ghost is vulnerable his picture changes
         if (vulnerable && !eaten) {
-            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostScaredAnimation[ghostAnimationCounter]), ghostRow * 20, ghostCol * 20, maze);
+            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostScaredAnimation[ghostAnimationCounter]), ghostCol * 20, ghostRow * 20, maze);
         }
         //displays an alert if pacman moves into ghost search parameter
         if (searching && alertCounter < 10) {
-            g.drawImage(Toolkit.getDefaultToolkit().getImage("Resources/sighted.png"), ghostRow * 20, (ghostCol * 20) - 50, maze);
+            g.drawImage(Toolkit.getDefaultToolkit().getImage("Resources/sighted.png"), ghostCol * 20, (ghostRow * 20) - 50, maze);
             alertCounter++;
         }
         //usual ghost animation
         if (!vulnerable && !eaten) {
-            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostAnimations[ghostAnimationCounter][ghostNumber]), (ghostRow * 20), (ghostCol * 20), maze);
+            g.drawImage(Toolkit.getDefaultToolkit().getImage(ghostAnimations[ghostAnimationCounter][ghostNumber]), ghostCol * 20, (ghostRow * 20), maze);
         }
 
         //count for animating ghosts
@@ -244,8 +134,6 @@ public class Ghost extends Thread {
     public void ghostIsVulnerable() {
         vulCounter = 0;
         vulnerable = true;
-
-
     }
 
     public boolean isVulnerable() {
@@ -260,60 +148,80 @@ public class Ghost extends Thread {
         return ghostCol;
     }
 
-    protected void setRow(int x) {
-        ghostRow = x;
+    protected void setRow(int y) {
+        ghostRow = y;
     }
 
-    protected void setCol(int y) {
-        ghostCol = y;
+    protected void setCol(int x) {
+        ghostCol = x;
     }
 
     //moves the ghosts by the specified x and y amounts
-    private void moveGhost(int x, int y) {
-        ghostRow = ghostRow + x;
-        ghostCol = ghostCol + y;
+    private void moveGhost(int column, int row) {
+        ghostRow = ghostRow + row;
+        ghostCol = ghostCol + column;
     }
 
     //gets the ghost collision box
     public Rectangle getGhostBounds() {
-        return new Rectangle(getRow() * 20, getCol() * 20, 20, 20);
+        return new Rectangle(getCol() * 20, getRow() * 20, 20, 20);
     }
 
     //gets the ghost search parameter
     //parameter is increased depending on the difficulty selected
     private Rectangle getSearchParameter() {
-        return new Rectangle((getRow() * 20) - searchPara[difficulty] / 2, (getCol() * 20) - searchPara[difficulty] / 2, searchPara[difficulty], searchPara[difficulty]);
+        return new Rectangle((getCol() * 20) - searchPara[difficulty] / 2, (getRow() * 20) - searchPara[difficulty] / 2, searchPara[difficulty], searchPara[difficulty]);
     }
 
     //determines if the cell can be navigated
     private boolean isCellNavigable(int column, int row) {
 
-        return (cells[column][row].getType() == 'o' || cells[column][row].getType() == 'd' || cells[column][row].getType() == 'p' || cells[column][row].getType() == 'g' || cells[column][row].getType() == 'e');
+        switch (graph.get_cell_by_coords(column,row).getType()) {
+            case 'o':
+                return true;
+            case 'd':
+                return true;
+            case 'p':
+                return true;
+            case 'g':
+                return true;
+            case 'e':
+                return true;
+            default:
+                return false;
+        }
     }
 
     //determines if a cell is navigable after the ghost has left the box
     private boolean isCellNavigableOutOfBox(int column, int row) {
 
-        return (cells[column][row].getType() == 'o' || cells[column][row].getType() == 'd' || cells[column][row].getType() == 'p');
-
+        switch (graph.get_cell_by_coords(column,row).getType()) {
+            case 'o':
+                return true;
+            case 'd':
+                return true;
+            case 'p':
+                return true;
+            default:
+                return false;
+        }
     }
 
     //determines the navigable cells for when the ghost is out of the box
     private boolean isDirectionNavigable(char direction) {
-        if (direction == 'u' && isCellNavigable(getCol() - 1, getRow())) {
+        if (direction == 'u' && isCellNavigable(getCol(), getRow()-1)) {
             return true;
 
-        } else if (direction == 'd' && isCellNavigable(getCol() + 1, getRow())) {
+        } else if (direction == 'd' && isCellNavigable(getCol(), getRow()+1)) {
             return true;
 
-        } else if (direction == 'l' && isCellNavigable(getCol(), getRow() - 1)) {
+        } else if (direction == 'l' && isCellNavigable(getCol()-1, getRow())) {
             return true;
 
-        } else if (direction == 'r' && isCellNavigable(getCol(), getRow() + 1)) {
+        } else if (direction == 'r' && isCellNavigable(getCol()+1, getRow())) {
             return true;
         }
         return false;
-
     }
 
     //sets the ghosts direction
@@ -323,38 +231,38 @@ public class Ghost extends Thread {
 
     //makes the ghosts move based on the current direction
     private void ghostMovement() {
-        if (direction == 'u' && isCellNavigable(getCol() - 1, getRow())) {
+        if (direction == 'u' && isCellNavigable(getCol(), getRow()-1)) {
             moveGhost(0, -1);
 
 
-        } else if (direction == 'd' && isCellNavigable(getCol() + 1, getRow())) {
+        } else if (direction == 'd' && isCellNavigable(getCol(), getRow()+1)) {
             moveGhost(0, +1);
 
 
-        } else if (direction == 'l' && isCellNavigable(getCol(), getRow() - 1)) {
+        } else if (direction == 'l' && isCellNavigable(getCol()-1, getRow())) {
             moveGhost(-1, 0);
 
 
-        } else if (direction == 'r' && isCellNavigable(getCol(), getRow() + 1)) {
+        } else if (direction == 'r' && isCellNavigable(getCol()+1, getRow())) {
             moveGhost(+1, 0);
         }
     }
 
     //ghost movements for when they're out of the box
     private void ghostMovementOutOfBox() {
-        if (direction == 'u' && isCellNavigableOutOfBox(getCol() - 1, getRow())) {
+        if (direction == 'u' && isCellNavigableOutOfBox(getCol(), getRow()-1)) {
             moveGhost(0, -1);
 
 
-        } else if (direction == 'd' && isCellNavigableOutOfBox(getCol() + 1, getRow())) {
+        } else if (direction == 'd' && isCellNavigableOutOfBox(getCol(), getRow()+1)) {
             moveGhost(0, +1);
 
 
-        } else if (direction == 'l' && isCellNavigableOutOfBox(getCol(), getRow() - 1)) {
+        } else if (direction == 'l' && isCellNavigableOutOfBox(getCol()-1, getRow())) {
             moveGhost(-1, 0);
 
 
-        } else if (direction == 'r' && isCellNavigableOutOfBox(getCol(), getRow() + 1)) {
+        } else if (direction == 'r' && isCellNavigableOutOfBox(getCol()+1, getRow())) {
             moveGhost(+1, 0);
         }
     }
@@ -486,7 +394,6 @@ public class Ghost extends Thread {
                     availableDir[i] = tempArray[i];
                 }
                 direction = availableDir[rand.nextInt(arraySize)];
-                arraySize = 0;
             }
         } else if (direction == 'r') {
             if (isDirectionNavigable('u')) {
@@ -577,7 +484,7 @@ public class Ghost extends Thread {
                 ghostChase();
                 ghostMovementOutOfBox();
                 maze.repaint();
-                if (!searching()) {
+                if (!searching(maze.getPacman().getPacmanBounds())) {
                     searching = false;
                 }
 
@@ -637,7 +544,7 @@ public class Ghost extends Thread {
 
             //normal behaviour
             //when pacman moves into ghost search range
-            if (searching()) {
+            if (searching(maze.getPacman().getPacmanBounds())) {
                 searching = true;
                 alertPlayer.play();
                 alertCounter = 0;
@@ -671,11 +578,11 @@ public class Ghost extends Thread {
     }
 
 
-    public boolean isEaten(){
+    public boolean isEaten() {
         return this.eaten;
     }
 
-    public void setEaten(Boolean isEaten){
+    public void setEaten(Boolean isEaten) {
         eaten = isEaten;
     }
 }

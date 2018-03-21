@@ -1,48 +1,52 @@
 //Darragh McLernon
 package Pacman;
 
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.*;
 
-public class UndirectedGraph implements GraphInterface
-{
+public class UndirectedGraph extends JPanel implements GraphInterface {
     //declaring class variables
 
-    private ArrayList<Node> nodes;
+    private ArrayList<Cell> cells;
     private int[][] adjMatrix;
+    int tileWidth;
+    int tileHeight;
 
     //constructor
-     UndirectedGraph(int size)
-    {
-        nodes = new ArrayList<>();
-        adjMatrix = new int[size][size];
+    UndirectedGraph() {
+        cells = new ArrayList<>();
+        adjMatrix = new int[1012][1012];
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
+        for (int i = 0; i < 1; i++) {
+            for (int j = 0; j < 1; j++) {
                 adjMatrix[i][j] = -1;
             }
         }
+
+        createGraph();
+
     }
+
 
     //adds the specified node to the matrix
-    public void addNode(Node n)
-    {
-        if (getSize() == adjMatrix.length) {
+    public void addCell(Cell n) {
+        if (cells.size() == adjMatrix.length) {
             expandCapacity();
         }
-        nodes.add(n);
+        cells.add(n);
     }
 
-    //returns the number of nodes
-    public int getSize()
-    {
-        return nodes.size();
+    public ArrayList<Cell> getCells() {
+        return cells;
     }
 
     //sets edge between specified nodes and sets weight between them
-    public void setEdge(Node start, Node end, int weight)
-    {
-        int startIndex = nodes.indexOf(start);
-        int endIndex = nodes.indexOf(end);
+    public void setEdge(Cell start, Cell end, int weight) {
+        int startIndex = start.getId();
+        int endIndex = end.getId();
         adjMatrix[startIndex][endIndex] = weight;
         adjMatrix[endIndex][startIndex] = weight;
         start.addNeighbor(end);
@@ -50,74 +54,52 @@ public class UndirectedGraph implements GraphInterface
     }
 
     //deletes edges between nodes
-    public void deleteEdge(Node start, Node end)
-    {
-        int startIndex = nodes.indexOf(start);
-        int endIndex = nodes.indexOf(end);
+    public void deleteEdge(Cell start, Cell end) {
+        int startIndex = start.getId();
+        int endIndex = end.getId();
         adjMatrix[startIndex][endIndex] = -1;
         adjMatrix[endIndex][startIndex] = -1;
     }
 
     //returns true if edge exists between specified nodes
-    public boolean edgeExists(Node start, Node end)
-    {
-        int startIndex = nodes.indexOf(start);
-        int endIndex = nodes.indexOf(end);
+    public boolean edgeExists(Cell start, Cell end) {
+        int startIndex = start.getId();
+        int endIndex = end.getId();
 
         //weight is -1 for nodes with an edge
-        if (adjMatrix[startIndex][endIndex] != -1) {
-            return true;
-        } else {
-            return false;
+        return adjMatrix[startIndex][endIndex] != -1;
+    }
+
+    //returns the weight between two nodes
+    public int getEdgeWeight(Cell start, Cell end) {
+        int startIndex = start.getId();
+        int endIndex = end.getId();
+
+        if (adjMatrix[startIndex][endIndex] == -1) {
+            return 5000000;
+        }
+
+        return adjMatrix[startIndex][endIndex];
+    }
+
+
+    private void clearCells() {
+        for (Cell cell : cells) {
+            cell.setVisited(false);
         }
     }
 
 
-    private void clearNodes()
-    {
-        int i = 0;
-        while (i < getSize()) {
-            Node n = (Node) nodes.get(i);
-            n.setVisited(false);
-            i++;
-        }
-    }
+    public void dump() {
 
-    //display the graph
-    public void dumpGraph()
-    {
-        dump(adjMatrix);
-    }
-
-    //generates a text version of the graph
-    public void dump(int a[][])
-    {
-        int size = 1012;
-        System.out.println("  ");
-
-        for (int s = 0; s < size; s = s + 1) {
-            System.out.print((Node) nodes.get(s));
+        for (Cell cell : cells) {
+            System.out.print(cell);
             System.out.println();
-        }
-
-        for (int s = 0; s < size; s = s + 1) {
-            System.out.print((Node) nodes.get(s));
-
-            for (int e = 0; e < size; e = e + 1) {
-                if (a[s][e] == -1) {
-                    System.out.print("F" + "\t");
-                } else {
-                    System.out.print("T" + "\t");
-                }
-            }
-            System.out.println();
-
         }
     }
 
     //extends the capacity of the array
-    private void expandCapacity()
-    {
+    private void expandCapacity() {
         int currentSize = adjMatrix.length;
 
         int[][] larger = new int[currentSize + 1][currentSize + 1];
@@ -130,28 +112,14 @@ public class UndirectedGraph implements GraphInterface
         adjMatrix = larger;
     }
 
-    //returns the weight between two nodes
-    public int getEdgeWeight(Node start, Node end)
-    {
-        int startIndex = nodes.indexOf(start);
-        int endIndex = nodes.indexOf(end);
-
-        if (adjMatrix[startIndex][endIndex] == -1) {
-            return 5000000;
-        }
-
-        return adjMatrix[startIndex][endIndex];
-    }
-
     //Dijkras algorithm
-    public Node getShortestDistance(Node src, Node dst)
-    {
+    public Cell getShortestDistance(Cell src, Cell dst) {
         if (src == null || dst == null) {
             return null;
         }
 
         final int[] pathWeights = new int[1012];
-        Node[] predecessors = new Node[1012];
+        Cell[] predecessors = new Cell[1012];
 
 
         //initialisation
@@ -161,20 +129,18 @@ public class UndirectedGraph implements GraphInterface
             predecessors[i] = null;
         }
 
-        clearNodes();
+        clearCells();
 
         pathWeights[src.getId()] = 0;
 
-        Iterator<Node> it;
-        Node temp = src;
-        Node neigh;
+        Iterator<Cell> it;
+        Cell temp = src;
+        Cell neigh;
 
         //compares two nodes based on weight
-        final Comparator<Node> comp = new Comparator<Node>()
-        {
+        final Comparator<Cell> comp = new Comparator<Cell>() {
 
-            public int compare(Node n1, Node n2)
-            {
+            public int compare(Cell n1, Cell n2) {
                 if (pathWeights[n1.getId()] > pathWeights[n2.getId()]) {
                     return 1;
                 }
@@ -184,17 +150,16 @@ public class UndirectedGraph implements GraphInterface
                 }
 
                 return 0;
-
             }
         };
 
         //setting up a new queue
-        PriorityQueue<Node> nodeQueue = new PriorityQueue<>(6, comp);
-        nodeQueue.add(src);
+        PriorityQueue<Cell> cellQueue = new PriorityQueue<>(6, comp);
+        cellQueue.add(src);
 
         //fills the queue with nodes
-        while (!temp.equals(dst) && !nodeQueue.isEmpty()) {
-            temp = nodeQueue.poll();
+        while (!temp.equals(dst) && !cellQueue.isEmpty()) {
+            temp = cellQueue.poll();
             if (!temp.isVisited()) {
                 temp.setVisited(true);
                 it = temp.getNeighbors();
@@ -204,14 +169,14 @@ public class UndirectedGraph implements GraphInterface
                         pathWeights[neigh.getId()] = pathWeights[temp.getId()] + getEdgeWeight(temp, neigh);
                         predecessors[neigh.getId()] = temp;
                     }
-                    nodeQueue.add(neigh);
+                    cellQueue.add(neigh);
                 }
             }
         }
 
         //constructing the shortest path
-        Vector<Node> pathVec = new Vector<Node>();
-        Node step = dst;
+        Vector<Cell> pathVec = new Vector<>();
+        Cell step = dst;
         while (step != null) {
             pathVec.add(step);
             step = predecessors[step.getId()];
@@ -228,4 +193,158 @@ public class UndirectedGraph implements GraphInterface
         }
         return pathVec.get(pathVec.size() - 2);
     }
+
+    //creates the search graph
+    private void createGraph() {
+
+        // Scanner object to read from map file
+        Scanner fileReader;
+        ArrayList<String> lineList = new ArrayList<String>();
+
+        // Attempt to load the maze map file
+        try {
+            fileReader = new Scanner(new File("Resources/level1.txt"));
+            while (true) {
+                String line = null;
+                try {
+                    line = fileReader.nextLine();
+                } catch (Exception eof) {
+                    //throw new A5FatalException("Could not read resource");
+                }
+                if (line == null) {
+                    break;
+                }
+                lineList.add(line);
+            }
+            tileHeight = lineList.size();
+            tileWidth = lineList.get(0).length();
+
+            int counter = 0;
+            // creating the cells
+            for (int row = 0; row < tileHeight; row++) {
+                String line = lineList.get(row);
+                for (int column = 0; column < tileWidth; column++) {
+                    char type = line.charAt(column);
+                    Cell new_cell = new Cell(counter, column, row, type);
+                    addCell(new_cell);
+                    counter++;
+                }
+            }
+        } catch (FileNotFoundException e) {
+            System.out.println("Maze map file not found");
+        }
+
+        addEdges();
+        //System.out.print(this.toString());
+    }
+
+    public void addEdges() {
+        //adds an edge to appropiate nodes
+
+        for (Cell cell : cells) {
+            SetCellEdgesX(cell);
+            SetCellEdgesY(cell);
+        }
+    }
+
+    //determines if the cell can be navigated
+    public boolean isCellNavigable(Cell cell) {
+
+        if(cell !=null) {
+            switch (cell.getType()) {
+                case 'o':
+                    return true;
+                case 'd':
+                    return true;
+                case 'p':
+                    return true;
+                case 'g':
+                    return true;
+                case 'e':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        return false;
+    }
+
+    public Cell get_cell_by_coords(int column, int row) {
+        for (Cell cell : cells) {
+            if (cell.getColumn() == column && cell.getRow() == row) {
+                return cell;
+            }
+        }
+        System.out.print("Could not find cell by co-ord");
+        return null;
+    }
+
+    //iterates through each node for the input node and checks if a horizontal edge should be added
+    private void SetCellEdgesX(Cell cell) {
+        for (Cell cell_compare : cells) {
+            if ((cell.getColumn() - cell_compare.getColumn()) == -1 && (cell.getRow() - cell_compare.getRow()) == 0) {
+                if (isCellNavigable(cell) & isCellNavigable(cell_compare)) {
+                    setEdge(cell, cell_compare, 1);
+                }
+            }
+        }
+    }
+
+    //iterates through each node for the input node and checks if a vertical edge should be added
+    private void SetCellEdgesY(Cell cell) {
+        for (Cell cell_compare : cells) {
+            if ((cell.getRow() - cell_compare.getRow()) == -1 && (cell.getColumn() - cell_compare.getColumn()) == 0) {
+                if (isCellNavigable(cell) & isCellNavigable(cell_compare)) {
+                    setEdge(cell, cell_compare, 1);
+                }
+            }
+        }
+    }
+
+    public boolean isLevelCleared() {
+
+        boolean isCleared = true;
+        for (Cell cell : cells) {
+            if (cell.getType() == 'd' || cell.getType() == 'p') {
+                isCleared = false;
+            }
+        }
+        return isCleared;
+    }
+
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+
+        for (Cell cell : cells) {
+            cell.drawBackground(g);
+        }
+    }
+
+    public int getGraphWidth(){
+        return tileWidth;
+    }
+
+    public int getGraphHeight(){
+        return tileHeight;
+    }
+
+
+    @Override
+    public String toString(){
+
+        String string = "";
+        int counter = 1;
+        for(Cell cell:cells){
+            if(cell.getRow()==counter){
+                string+="\n";
+                counter++;
+            }
+
+            string += "[" + cell.getColumn() + "," + cell.getRow() + "]";
+
+
+        }
+        return string;
+    }
+
 }
